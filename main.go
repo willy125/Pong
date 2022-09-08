@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gdamore/tcell"
 )
@@ -13,6 +14,7 @@ const PaddleHeight = 4
 var screen tcell.Screen
 var player1 *Paddle
 var player2 *Paddle
+var debugLog string
 
 type Paddle struct {
 	row, col, width, height int
@@ -34,24 +36,25 @@ func Print(row, col, width, height int, ch rune) {
 
 func DrawState() {
 	screen.Clear()
+	PrintString(0, 0, debugLog)
 	Print(player1.row, player1.col, player1.width, player1.height, PaddleSymbol)
 	Print(player2.row, player2.col, player2.width, player2.height, PaddleSymbol)
 	screen.Show()
 }
 
-// This program just prints "Hello, World!".  Press ESC to exit.
 func main() {
 	InitScreen()
 	InitGameState()
-	DrawState()
-
+	InitUserInput()
+	inputChan := InitUserInput()
 	for {
-		switch ev := screen.PollEvent().(type) {
-		case *tcell.EventKey:
-			if ev.Key() == tcell.KeyEnter {
-				screen.Fini()
-				os.Exit(0)
-			}
+		DrawState()
+		time.Sleep(50 * time.Millisecond)
+
+		key := <-inputChan
+		if key == "Rune[q]" {
+			screen.Fini()
+			os.Exit()
 		}
 	}
 }
@@ -72,6 +75,22 @@ func InitScreen() {
 		Background(tcell.ColorBlack).
 		Foreground(tcell.ColorWhite)
 	screen.SetStyle(defStyle)
+
+}
+func InitUserInput() chan string {
+	inputChan := make(chan string)
+	go func() {
+		for {
+
+			//time.Sleep(75 * time.Millisecond)
+			switch ev := screen.PollEvent().(type) {
+			case *tcell.EventKey:
+				debugLog = ev.Name()
+				inputChan <- ev.Name()
+			}
+		}
+	}()
+	return inputChan
 
 }
 func InitGameState() {
