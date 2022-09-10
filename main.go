@@ -9,6 +9,7 @@ import (
 )
 
 const PaddleSymbol = 0x2588
+const BallSymbol = 0x25CF
 const PaddleHeight = 4
 
 var screen tcell.Screen
@@ -34,29 +35,25 @@ func Print(row, col, width, height int, ch rune) {
 	}
 }
 
-func DrawState() {
-	screen.Clear()
-	PrintString(0, 0, debugLog)
-	Print(player1.row, player1.col, player1.width, player1.height, PaddleSymbol)
-	Print(player2.row, player2.col, player2.width, player2.height, PaddleSymbol)
-	screen.Show()
-}
-
 func main() {
 	InitScreen()
 	InitGameState()
-	InitUserInput()
 	inputChan := InitUserInput()
 	for {
 		DrawState()
 		time.Sleep(50 * time.Millisecond)
 
 		key := <-inputChan
-		if key == "Rune[q]" {
-			screen.Fini()
-			os.Exit()
-		}
+		HandleUserInput(key)
+
 	}
+}
+func DrawState() {
+	screen.Clear()
+	PrintString(0, 0, debugLog)
+	Print(player1.row, player1.col, player1.width, player1.height, PaddleSymbol)
+	Print(player2.row, player2.col, player2.width, player2.height, PaddleSymbol)
+	screen.Show()
 }
 
 func InitScreen() {
@@ -77,15 +74,28 @@ func InitScreen() {
 	screen.SetStyle(defStyle)
 
 }
+func HandleUserInput(key string) {
+	_, screenHeight := screen.Size()
+	if key == "Rune[q]" {
+		screen.Fini()
+		os.Exit(0)
+	} else if key == "Rune[w]" && player1.row > 0 {
+		player1.row--
+	} else if key == "Rune[s]" && player1.row+player1.height < screenHeight {
+		player1.row++
+	} else if key == "Up" && player2.row > 0 {
+		player2.row--
+	} else if key == "Down" && player2.row+player2.height < screenHeight {
+		player2.row++
+	}
+}
 func InitUserInput() chan string {
 	inputChan := make(chan string)
 	go func() {
 		for {
 
-			//time.Sleep(75 * time.Millisecond)
 			switch ev := screen.PollEvent().(type) {
 			case *tcell.EventKey:
-				debugLog = ev.Name()
 				inputChan <- ev.Name()
 			}
 		}
