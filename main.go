@@ -11,9 +11,12 @@ import (
 const PaddleSymbol = 0x2588
 const BallSymbol = 0x25CF
 const PaddleHeight = 4
+const initialBallVelocityRow = 1
+const initialBallVelocityCol = 2
 
 type GameObject struct {
 	row, col, width, height int
+	velRow, velCol          int
 	symbol                  rune
 }
 
@@ -44,12 +47,17 @@ func main() {
 	InitGameState()
 	inputChan := InitUserInput()
 	for {
+		HandleUserInput(ReadInput(inputChan))
+		UpdateState()
 		DrawState()
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(75 * time.Millisecond)
 
-		key := <-inputChan
-		HandleUserInput(key)
-
+	}
+}
+func UpdateState() {
+	for i := range gameObjects {
+		gameObjects[i].row += gameObjects[i].velRow
+		gameObjects[i].col += gameObjects[i].velCol
 	}
 }
 func DrawState() {
@@ -114,14 +122,26 @@ func InitGameState() {
 
 	player1Paddle = &GameObject{
 		row: paddleStart, col: 0, width: 1, height: PaddleHeight, symbol: PaddleSymbol,
+		velRow: 0, velCol: 0,
 	}
 	player2Paddle = &GameObject{
 		row: paddleStart, col: width - 1, width: 1, height: PaddleHeight, symbol: PaddleSymbol,
+		velRow: 0, velCol: 0,
 	}
 	ball = &GameObject{
 		row: height / 2, col: width / 2, width: 1, height: 1, symbol: BallSymbol,
+		velRow: initialBallVelocityRow, velCol: initialBallVelocityCol,
 	}
 	gameObjects = []*GameObject{
 		player1Paddle, player2Paddle, ball,
 	}
+}
+func ReadInput(inputChan chan string) string {
+	var key string
+	select {
+	case key = <-inputChan:
+	default:
+		key = ""
+	}
+	return key
 }
