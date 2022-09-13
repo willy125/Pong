@@ -28,6 +28,10 @@ var debugLog string
 
 var gameObjects []*GameObject
 
+func PrintStringCenter(row, col int, str string) {
+	col = col - len(str)/2
+	PrintString(row, col, str)
+}
 func PrintString(row, col int, str string) {
 	for _, c := range str {
 		col += 1
@@ -46,13 +50,21 @@ func main() {
 	InitScreen()
 	InitGameState()
 	inputChan := InitUserInput()
-	for {
+	for !IsGameOver() {
 		HandleUserInput(ReadInput(inputChan))
 		UpdateState()
 		DrawState()
 		time.Sleep(75 * time.Millisecond)
 
 	}
+	scrrenWidth, screenHeight := screen.Size()
+	winner := GetWinner()
+	PrintStringCenter(screenHeight/2-1, scrrenWidth/2, "Game Over!")
+	PrintStringCenter(screenHeight/2, scrrenWidth/2, fmt.Sprintf("%s 1 wins...", winner))
+	screen.Show()
+	time.Sleep(3 * time.Second)
+	screen.Fini()
+
 }
 func UpdateState() {
 	for i := range gameObjects {
@@ -61,6 +73,9 @@ func UpdateState() {
 	}
 	if collidesWithWall(ball) {
 		ball.velRow = -ball.velRow
+	}
+	if CollidesWithPaddle(ball, player1Paddle) || CollidesWithPaddle(ball, player2Paddle) {
+		ball.velCol = -ball.velCol
 	}
 }
 func DrawState() {
@@ -71,11 +86,34 @@ func DrawState() {
 	}
 	screen.Show()
 }
+func CollidesWithPaddle(ball *GameObject, paddle *GameObject) bool {
+	var collidesColumn bool
+	if ball.col < paddle.col {
+		collidesColumn = ball.col+ball.velCol >= paddle.col
+	} else {
+		collidesColumn = ball.col+ball.velCol <= paddle.col
+	}
+	return collidesColumn &&
+		ball.row >= paddle.row &&
+		ball.row < paddle.row+paddle.height
+}
 func collidesWithWall(obj *GameObject) bool {
 	_, screenHeight := screen.Size()
 	return obj.row+obj.velRow < 0 || obj.row+obj.velRow >= screenHeight
 }
-
+func IsGameOver() bool {
+	return GetWinner() != ""
+}
+func GetWinner() string {
+	screenWidth, _ := screen.Size()
+	if ball.col < 0 {
+		return "player 2"
+	} else if ball.col >= screenWidth {
+		return "player1"
+	} else {
+		return ""
+	}
+}
 func InitScreen() {
 	var err error
 	screen, err = tcell.NewScreen()
